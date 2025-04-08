@@ -1,3 +1,6 @@
+import json
+import requests
+
 class TelegramBot:
   """Telegram bot api wrapper
   :usage:
