@@ -4,7 +4,7 @@ import requests
 class TelegramBot:
   """Telegram bot api wrapper
   :usage:
-  bot = TelegramBot(telegram_token, chat_id)
+  bot = TelegramBot(token, chat_id)
   bot.send_message("This is a TEST")
   bot.send_photo("TEST.png")
   """
@@ -41,7 +41,7 @@ class TelegramBot:
 
   def send_message(self, text, chat_id=None):
     chat_id = chat_id if chat_id is not None else self.chat_id
-    url = f"/bot{telegram_token}/sendMessage"
+    url = f"/bot{self.token}/sendMessage"
     params = {'chat_id': chat_id, 'text': text}
     return self._api_getter(self.host, url, params)
 
@@ -52,7 +52,7 @@ class TelegramBot:
 
   def send_photo(self, path_img, chat_id=None):
     chat_id = chat_id if chat_id is not None else self.chat_id
-    url = f"/bot{telegram_token}/sendPhoto"
+    url = f"/bot{self.token}/sendPhoto"
     files = {'photo': open(path_img, 'rb')}
     params = {'chat_id': chat_id}
     return self._api_poster(self.host, url, files, params)
