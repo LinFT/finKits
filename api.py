@@ -1,5 +1,56 @@
+from datetime import datetime
 import json
+import pandas as pd
+import pytz
 import requests
+import time
+
+class DataToolKits:
+  def __init__(self, **kwargs):
+    pass
+
+  def _datetime_to_timestamp(self, dt):
+    """
+    :param dt: Datetime
+    :return: int, Unix timestamp in milliseconds
+    """
+    return int(dt.timestamp() * 1000)
+
+  def _timestamp_to_datetime(self, timestamp_ms):
+    """
+    :param timestamp_ms: int, Unix timestamp in milliseconds
+    :return: datetime
+    """
+    timestamp_s = timestamp_ms / 1000
+    return datetime.fromtimestamp(timestamp_s)
+
+  def _timestamp_to_fmtstr(self, timestamp_ms, format='%Y-%m-%d %H:%M %Z%z', time_zone=None):
+    """
+    :param timestamp_ms: int, Unix timestamp in milliseconds
+    :param format: str, datetime format
+    :param time_zone: str, timezone
+    :return: str, formatted datetime-string
+    """
+    if time_zone is not None:
+      tz = pytz.timezone(time_zone)
+      dt_obj = self._timestamp_to_datetime(timestamp_ms).astimezone(tz)
+    else:
+      dt_obj = self._timestamp_to_datetime(timestamp_ms)
+    return dt_obj.strftime(format)
+
+  def _df_splits_instrument_components(self, df):
+    """
+    :param df: pandas.DataFrame, with instrument_name column in the format BTC-21MAR25-100000-C
+    :return: pandas.DataFrame, with the instrument_name column been splitted into separate columns
+    """
+    # Split the instrument name into separate columns and merge back to the dataframe
+    instrument_components = df['instrument_name'].str.split("-", expand=True)
+    instrument_components.columns = ['underlying', 'maturity', 'strike', 'op_type']
+    # Convert maturity to datetime and strike to integer
+    instrument_components['maturity'] = pd.to_datetime(instrument_components['maturity'])
+    instrument_components['strike'] = instrument_components['strike'].astype(float)
+    # Merge the split instrument components back into the original dataframe
+    return pd.concat([df, instrument_components], axis=1)
 
 class TelegramBot:
   """Telegram bot api wrapper
