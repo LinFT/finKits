@@ -1,9 +1,99 @@
 from datetime import datetime
 import json
+import numpy as np
 import pandas as pd
 import pytz
 import requests
 import time
+
+class BlackScholes:
+  from scipy.stats import norm
+  Nc = norm.cdf
+  Np = norm.pdf
+
+  def __init__(self, S=None, K=None, T=None, R=None, sigma=None):
+    """
+    :param S: the price of the underlying asset at time t
+    :param K: the strike price of the option, also known as the exercise price
+    :param T: the time of option expiration
+    :param R: the annualized risk-free interest rate, continuously compounded
+    :param sigma: the standard deviation of the stock's returns, a measure of its volatility
+    """
+    self.S = S
+    self.K = K
+    self.T = T
+    self.R = R
+    self.sigma = sigma
+
+  def price(self, S, K, T, R, sigma, option_type):
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    if option_type == "C":
+      price = S * self.Nc(d1) - K * np.exp(-R*T)* self.Nc(d2)
+    elif option_type == "P":
+      price = K * np.exp(-R*T) * self.Nc(-d2) - S * self.Nc(-d1)
+    return price
+
+  def delta(self, S, K, T, R, sigma, option_type):
+    """
+    :return: float, p(V)/p(S), p: partial differential, V(S,t): option price
+    """
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    if option_type == "C":
+      delta = self.Nc(d1)
+    elif option_type == "P":
+      delta = self.Nc(d1) - 1
+    return delta
+
+  def gamma(self, S, K, T, R, sigma):
+    """
+    :return: float, p^2(V)/p^2(S), p: partial differential, V(S,t): option price
+    """
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    gamma = self.Np(d1) / (S * sigma * np.sqrt(T))
+    return gamma
+
+  def vega(self, S, K, T, R, sigma):
+    """
+    :return: float, p(V)/p(sigma), p: partial differential, V(S,t): option price
+    """
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    vega = S * self.Np(d1) * np.sqrt(T)
+    return vega * 0.01
+
+  def theta(self, S, K, T, R, sigma, option_type):
+    """
+    :return: float, p(V)/p(t), p: partial differential, V(S,t): option price
+    """
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    if option_type == "C":
+      theta = -S * self.Np(d1) * sigma / (2 * np.sqrt(T)) - R * K * np.exp(-R * T) * self.Nc(d2)
+    elif option_type == "P":
+      theta = -S * self.Np(d1) * sigma / (2 * np.sqrt(T)) + R * K * np.exp(-R * T) * self.Nc(-d2)
+    return theta / 365
+
+  def rho(self, S, K, T, R, sigma, option_type):
+    """
+    :return: float, p(V)/p(R), p: partial differential, V(S,t): option price
+    """
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    if option_type == "C":
+      rho = K * T * np.exp(-R * T) * self.Nc(d2)
+    elif option_type == "P":
+      rho = -K * T * np.exp(-R * T) * self.Nc(-d2)
+    return rho * 0.01
+
+  def option_value_expiry(self, S, K, size, option_type):
+    """
+    :return: float, the intrinsic value in dollars at expiry of a linear options
+    """
+    if option_type == "C":
+      option_value = max(0, S - K) * size
+    elif option_type == "P":
+      option_value = max(0, K - S) * size
+    return option_value
 
 class DataToolKits:
   def __init__(self, **kwargs):
